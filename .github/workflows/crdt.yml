@@ -1,0 +1,70 @@
+name: CRDT
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crdt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Bootstrap Linux Clang
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          clang=$(command -v clang-22)
+          test -x "$clang"
+          echo "SILK_CLANG=$clang" >> "$GITHUB_ENV"
+      - name: Bootstrap macOS Clang and linker
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
+        run: |
+          set -euo pipefail
+          prefix=$(brew --prefix)
+          test -x "$prefix/opt/llvm@22/bin/clang" || brew install llvm@22
+          test -x "$prefix/opt/lld@22/bin/ld64.lld" || brew install lld@22
+          echo "SILK_CLANG=$prefix/opt/llvm@22/bin/clang" >> "$GITHUB_ENV"
+          echo "$prefix/opt/lld@22/bin" >> "$GITHUB_PATH"
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+      - name: Install Silk
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^silk-version = "\([^"]*\)"/\1/p' silk.toml)
+          test -n "$version"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/silk-lang/silk/bf7450df2216/install.sh" \
+            -o "$RUNNER_TEMP/install-silk.sh"
+          SILK_RELEASE="v$version" sh "$RUNNER_TEMP/install-silk.sh"
+          echo "$HOME/.silk/bin" >> "$GITHUB_PATH"
+      - run: silk use
+      - run: silk format --check
+      - run: silk check
+      - run: silk test --manifest-path modules/btree/silk.toml --root src/tests.silk
+      - run: silk test --manifest-path modules/core/silk.toml --root src/tests.silk
+      - run: silk test --manifest-path modules/sync/silk.toml --root src/tests.silk
+      - run: silk test --manifest-path modules/store-sqlite/silk.toml --root src/tests.silk
+      - run: silk build

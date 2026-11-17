@@ -1,0 +1,11 @@
+[package]
+name = "crdt-store-sqlite"
+description = "A crdt-core Store kept in SQLite through lib-sqlite"
+version = "0.1.0"
+silk-version = "0.1.0-dev.84+bf7450df2216"
+kind = "library"
+exports = ["sqlite_store"]
+
+[dependencies]
+core = { path = "../core", package = "crdt-core" }
+sqlite = { git = "https://github.com/silk-lang/lib-sqlite", rev = "a832919925afa6ac4dc6ba50fd6698b393703d70", package = "db-sqlite" }

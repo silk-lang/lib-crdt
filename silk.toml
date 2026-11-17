@@ -1,0 +1,10 @@
+[workspace]
+members = [
+  "modules/bench",
+  "modules/btree",
+  "modules/core",
+  "modules/server",
+  "modules/store-sqlite",
+  "modules/sync",
+]
+silk-version = "0.1.0-dev.84+bf7450df2216"
