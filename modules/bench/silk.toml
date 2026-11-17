@@ -1,0 +1,7 @@
+[package]
+name = "crdt-bench"
+version = "0.1.0"
+silk-version = "0.1.0-dev.85+45b9e51824ca"
+
+[dependencies]
+core = { path = "../core", package = "crdt-core" }
